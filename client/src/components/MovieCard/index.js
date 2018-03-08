@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import Favorite from '../Favorite';
 import './movieCard.css';
 
-import { FAVES_QUERY } from '../../screens/MoviesScreen';
+// import { FAVES_QUERY } from '../../screens/MoviesScreen';
 
 class MovieCard extends Component {
 
@@ -51,6 +51,10 @@ MovieCard.fragment = gql`
     releaseDate
     overview
     isFavorite
+    runtime
+    revenue
+    voteAverage
+    backdropPath
   }
 `;
 

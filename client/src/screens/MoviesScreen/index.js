@@ -15,7 +15,7 @@ const FavCount = ({ count }) => {
   </div>
 }
 
-const Movies = ({ movies, favorites, loading, loadMore }) => {
+const Movies = ({ movies, favorites = [], loading, loadMore }) => { //all inside the data prop
   if (loading) return null;
 
   return (
@@ -43,55 +43,51 @@ const Movies = ({ movies, favorites, loading, loadMore }) => {
  *   - Add pagination using FetchMore
  */
 
-
 export const MOVIES_QUERY = gql`
-  query Movies($page: Int) {
+    query Movies($page: Int) {
       movies(page: $page) @connection(key: "Movies") {
         id
         ...MovieCard
       }
       favorites {
-        id
+        id #we need a value otherwise it's wrong, even if we don't really use it 
       }
-  }
-  ${MovieCard.fragment}
-`;
+    }
+    ${MovieCard.fragment}
+  `
 
-const withData = graphql(
+const withMovies = graphql(
   MOVIES_QUERY,
   {
-    props: ({ data: { movies, loading, favorites, fetchMore } }) => {
-      return {
-        movies,
+    props: ({ data: { movies, favorites, loading, fetchMore } }) =>
+      ({ 
+        movies, 
         favorites,
         loading,
         loadMore: () => {
+          /* determine the next page int */
           const nextPage = Math.floor(movies.length / 20) + 1;
+
           return fetchMore({
             variables: {
               page: nextPage
             },
-            /**
-             * The first argument contains the list of movies already fetched and stored in the cache.
-             * The second argument contains the next page of movies.
-             *
-             * It's our responsibility to return an updated result to be persisted to the cache
-             * and the place to do that is in UpdateQuery.
-             */
-            updateQuery: (previousResult, { fetchMoreResult }) => {
-              if (!fetchMoreResult) {
-                return previousResult;
-              }
-              return Object.assign({}, previousResult, {
-                // Append the new feed results to the old one
-                movies: [...previousResult.movies, ...fetchMoreResult.movies]
-              });
+            updateQuery: (previous, { fetchMoreResult }) => {
+              if (!previous) return previous;
+
+              return {
+                ...previous,
+                movies: [
+                  ...previous.movies,
+                  ...fetchMoreResult.movies
+                ]
+              };
             }
           });
         }
-      }
-    }
+      })
   }
 );
 
-export default withData(Movies);
+export default withMovies(Movies);
+        

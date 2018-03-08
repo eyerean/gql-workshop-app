@@ -22,7 +22,7 @@ const Favorite = ({
 Favorite.propTypes = {
   selected: PropTypes.bool,
   addToFavorites: PropTypes.func,
-  selected: PropTypes.func,
+  removeFromFavorites: PropTypes.func,
 }
 
 /**
@@ -35,22 +35,23 @@ Favorite.propTypes = {
  *  Then do the same for removing favorites!
  */
 
-const withAddToFavorites = graphql(gql`
-  mutation($id: ID!) {
-    addToFavorites(input: { id: $id }) {
+ const withAddToFavorites = graphql(gql`
+  mutation($movieId: ID!) {
+    addToFavorites(input: { id: $movieId }) {
       id
       isFavorite
     }
   }
 `, {
-    props: ({ mutate, ownProps: { movieId } }) => {
-      return {
-        addToFavorites: () => mutate({
+  props: ({mutate, ownProps: {movieId}}) => {
+    return {
+      addToFavorites: () => {
+        mutate({
           variables: {
-            id: movieId
+            movieId
           },
           optimisticResponse: {
-            __typename: "Mutation",
+            __typename: 'Mutation',
             addToFavorites: {
               __typename: 'Movie',
               id: movieId,
@@ -59,63 +60,74 @@ const withAddToFavorites = graphql(gql`
           },
           update: (cache, { data: { addToFavorites: movie } }) => {
             const data = cache.readQuery({
-              query: MOVIES_QUERY
-            });
-            const hasMovie = data.favorites.some(({ id }) => id === movieId);
+                query: MOVIES_QUERY
+              });
 
-            if (!hasMovie) {
-              data.favorites.push(movie);
+              const hasMovie = data.favorites
+                .some(x => x.id === movieId);
 
-              cache.writeQuery({
-                query: MOVIES_QUERY,
-                data
-              })
-            }
+              /* mutate if favorites don't contain the movie */
+              if (!hasMovie) {
+                data.favorites.push(movie);
+
+                cache.writeQuery({
+                  query: MOVIES_QUERY,
+                  data
+                })
+              }
           }
         })
       }
     }
-  });
+  }
+});
 
-const withRemoveFromFavorites = graphql(gql`
-  mutation($id: ID!) {
-    removeFromFavorites(input: { id: $id }) {
+ const withRemoveFromFavorites = graphql(gql`
+  mutation($movieId: ID!) {
+    removeFromFavorites(input: { id: $movieId }) {
       id
       isFavorite
     }
   }
 `, {
-    props: ({ mutate, ownProps: { movieId } }) => {
-      return {
-        removeFromFavorites: () => mutate({
+  props: ({mutate, ownProps: {movieId}}) => {
+    return {
+      removeFromFavorites: () => {
+        mutate({
           variables: {
-            id: movieId
+            movieId
           },
           optimisticResponse: {
-            __typename: "Mutation",
+            __typename: 'Mutation',
             removeFromFavorites: {
               __typename: 'Movie',
               id: movieId,
-              isFavorite: true
+              isFavorite: false
             }
           },
           update: (cache, { data: { removeFromFavorites: movie } }) => {
             const data = cache.readQuery({
-              query: MOVIES_QUERY
-            });
-
-            data.favorites = data.favorites.reduce((favorites, movie) => {
-              if (movie.id === movieId) return favorites;
-              return [...favorites, movie];
-            }, []);
-
-            cache.writeQuery({
-              query: MOVIES_QUERY,
-              data
-            })
-          }
+                query: MOVIES_QUERY
+              });
+              
+              const hasMovie = data.favorites.some(x => x.id === movieId);
+              let newFavs = [];
+                if (hasMovie) {
+                  newFavs = data.favorites.filter(m => m.id !== movieId);
+                }
+                cache.writeQuery({
+                  query: MOVIES_QUERY,
+                  data: {...data,
+                    favorites: newFavs
+                  }
+                })
+              }
+          
         })
       }
     }
-  });
+  }
+});
+
 export default compose(withAddToFavorites, withRemoveFromFavorites)(Favorite);
+

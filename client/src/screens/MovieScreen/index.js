@@ -6,6 +6,7 @@ import { withProps } from 'recompose';
 
 import './movie.css';
 import Favorite from '../../components/Favorite';
+import MovieCard from '../../components/MovieCard';
 
 const Detail = ({ label, value }) => {
   return (
@@ -68,39 +69,28 @@ class Movie extends Component {
  *   - Extract props from data
  */
 
-const withData = graphql(
-  gql`
-    query Movie($movieId: ID!) {
+
+const withData = graphql(gql`
+   query Movie($movieId: ID!) {
       movie(id: $movieId) {
         id
-        title
-        backdropPath
-        posterPath(size: MEDIUM)
-        tagline
-        overview
-        releaseDate
-        voteAverage
-        runtime
-        revenue
-        isFavorite
+        ...MovieCard
       }
     }
-  `,
-  {
-    options: ({ match: { params: { id } } }) => {
-      return {
-        variables: {
-          movieId: id
-        }
-      };
-    },
-    props: ({ data: { movie, loading } }) => {
-      return {
-        movie,
-        loading
-      };
+    ${MovieCard.fragment}
+  `, {
+  /* Map ownProps.match.params.id to variable */
+  options: ownProps => ({
+    variables: {
+      movieId: ownProps.match.params.id
     }
-  }
-);
+  }),
+  props: ({ data: { movie, loading } }) =>
+    ({ 
+      movie, 
+      loading
+     })
+  
+});
 
 export default withData(Movie);
